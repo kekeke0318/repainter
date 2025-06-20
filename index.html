@@ -19,10 +19,14 @@
         <label
           >JSON読み込み:<input type="file" id="importJson" accept=".json"
         /></label>
-        <button id="exportJsonBtn" aria-label="JSON書き出し">
+        <button
+          id="exportJsonBtn"
+          aria-label="JSON書き出し"
+          title="JSON書き出し"
+        >
           <span class="material-icons">save</span>
         </button>
-        <button id="saveBtn" aria-label="PNG保存">
+        <button id="saveBtn" aria-label="PNG保存" title="PNG保存">
           <span class="material-icons">image</span>
         </button>
       </div>
@@ -39,6 +43,16 @@
             step="0.01"
             value="1"
           /><span id="alphaValue">1</span></label
+        >
+        <label
+          >モチーフ透明度:<input
+            type="range"
+            id="motifAlpha"
+            min="0"
+            max="1"
+            step="0.01"
+            value="1"
+          /><span id="motifAlphaValue">1</span></label
         >
         <label
           >線幅:<input
@@ -65,30 +79,31 @@
         >
         <label
           >グリッドサイズ:<select id="gridSize">
-            <option value="8">8</option>
-            <option value="16" selected>16</option>
-            <option value="32">32</option>
+            <option value="1" selected>1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
           </select></label
         >
       </div>
       <div class="section" id="editControls">
-        <button id="undoBtn" aria-label="元に戻す">
+        <button id="undoBtn" aria-label="元に戻す" title="元に戻す">
           <span class="material-icons">undo</span>
         </button>
-        <button id="redoBtn" aria-label="やり直す">
+        <button id="redoBtn" aria-label="やり直す" title="やり直す">
           <span class="material-icons">redo</span>
         </button>
-        <button id="clearBtn" aria-label="消去">
+        <button id="clearBtn" aria-label="消去" title="消去">
           <span class="material-icons">delete</span>
         </button>
-        <button id="centerBtn" aria-label="中央表示">
+        <button id="centerBtn" aria-label="中央表示" title="中央表示">
           <span class="material-icons">center_focus_strong</span>
         </button>
       </div>
       <div class="section" id="playbackControls">
-        <button id="playBtn">再生</button>
-        <button id="prevFrameBtn">&#9664;</button>
-        <button id="nextFrameBtn">&#9654;</button>
+        <button id="playBtn" title="再生 / 一時停止">再生</button>
+        <button id="prevFrameBtn" title="前のフレーム">&#9664;</button>
+        <button id="nextFrameBtn" title="次のフレーム">&#9654;</button>
         <input type="range" id="playbackRange" min="0" value="0" step="1" />
         <label
           ><input type="checkbox" id="playUseCurrent" /> 現在の設定を使用</label

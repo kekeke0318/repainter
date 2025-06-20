@@ -4,8 +4,10 @@ const canvas = document.getElementById("drawingCanvas");
 const ctx = canvas.getContext("2d");
 const penColor = document.getElementById("penColor");
 const penAlpha = document.getElementById("penAlpha");
+const motifAlpha = document.getElementById("motifAlpha");
 const penWidth = document.getElementById("penWidth");
 const alphaValue = document.getElementById("alphaValue");
+const motifAlphaValue = document.getElementById("motifAlphaValue");
 const widthValue = document.getElementById("widthValue");
 const stabilizeValue = document.getElementById("stabilizeValue");
 const clearBtn = document.getElementById("clearBtn");
@@ -98,14 +100,9 @@ function drawStroke(stroke) {
   const pts = cells.map(cellToPos);
   ctx.beginPath();
   ctx.moveTo(pts[0].x, pts[0].y);
-  for (let i = 0; i < pts.length - 1; i++) {
-    const c = pts[i];
-    const n = pts[i + 1];
-    const mx = (c.x + n.x) / 2;
-    const my = (c.y + n.y) / 2;
-    ctx.quadraticCurveTo(c.x, c.y, mx, my);
+  for (let i = 1; i < pts.length; i++) {
+    ctx.lineTo(pts[i].x, pts[i].y);
   }
-  ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
   ctx.stroke();
 }
 
@@ -135,6 +132,8 @@ setCanvasSize(640, 480);
 updateTransform();
 saveHistory();
 alphaValue.textContent = parseFloat(penAlpha.value).toFixed(2);
+motifAlphaValue.textContent = parseFloat(motifAlpha.value).toFixed(2);
+motif.style.opacity = motifAlpha.value;
 widthValue.textContent = penWidth.value;
 stabilizeValue.textContent = stabilizeRange.value;
 
@@ -354,6 +353,11 @@ penAlpha.addEventListener("input", () => {
   alphaValue.textContent = parseFloat(penAlpha.value).toFixed(2);
 });
 
+motifAlpha.addEventListener("input", () => {
+  motifAlphaValue.textContent = parseFloat(motifAlpha.value).toFixed(2);
+  motif.style.opacity = motifAlpha.value;
+});
+
 penWidth.addEventListener("input", () => {
   widthValue.textContent = penWidth.value;
 });
@@ -425,7 +429,12 @@ nextFrameBtn.addEventListener("click", () => {
 });
 
 exportJsonBtn.addEventListener("click", () => {
-  const data = { gridSize: GRID_SIZE, strokes: recordedStrokes };
+  const data = {
+    gridSize: GRID_SIZE,
+    width: canvas.width,
+    height: canvas.height,
+    strokes: recordedStrokes,
+  };
   const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
@@ -444,6 +453,10 @@ importJson.addEventListener("change", (e) => {
     if (data.gridSize) {
       GRID_SIZE = data.gridSize;
       gridSizeInput.value = GRID_SIZE;
+    }
+    if (data.width && data.height) {
+      setCanvasSize(data.width, data.height);
+      updateTransform();
     }
     playbackStrokes = data.strokes || [];
     playbackRange.max = playbackStrokes.length;
