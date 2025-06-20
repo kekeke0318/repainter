@@ -40,6 +40,8 @@
   <label>ペン色 <input type="color" id="penColor" value="#000000"></label>
   <label>ペン太さ <input type="range" id="penSize" min="1" max="20" value="3"></label>
   <label>非表示時アルファ <input type="range" id="alpha" min="0" max="1" step="0.1" value="0"></label>
+  <label>フェード量 <input type="range" id="fadeStep" min="0" max="1" step="0.05" value="0"></label>
+  <label>アンチエイリアス <input type="checkbox" id="antialias" checked></label>
 </div>
 <canvas id="canvas" width="800" height="600"></canvas>
 <script>
@@ -48,14 +50,22 @@ const ctx = canvas.getContext('2d');
 let drawing = false;
 let motifImg = null;
 let alpha = 0;
+let displayAlpha = 1.0;
+let fadeStep = 0;
 
 const penColor = document.getElementById('penColor');
 const penSize = document.getElementById('penSize');
 const alphaInput = document.getElementById('alpha');
+const fadeStepInput = document.getElementById('fadeStep');
+const antialiasInput = document.getElementById('antialias');
 
 function clearCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (motifImg) ctx.drawImage(motifImg, 0, 0, canvas.width, canvas.height);
+    if (motifImg) {
+        ctx.globalAlpha = displayAlpha;
+        ctx.drawImage(motifImg, 0, 0, canvas.width, canvas.height);
+        ctx.globalAlpha = 1.0;
+    }
 }
 
 function draw(e) {
@@ -82,14 +92,20 @@ canvas.addEventListener('mouseup', () => {
     drawing = false;
     ctx.beginPath();
     ctx.globalAlpha = 1.0;
-    if (motifImg) clearCanvas();
+    if (motifImg) {
+        displayAlpha = Math.max(0, displayAlpha - fadeStep);
+        clearCanvas();
+    }
 });
 
 canvas.addEventListener('mouseout', () => {
     drawing = false;
     ctx.beginPath();
     ctx.globalAlpha = 1.0;
-    if (motifImg) clearCanvas();
+    if (motifImg) {
+        displayAlpha = Math.max(0, displayAlpha - fadeStep);
+        clearCanvas();
+    }
 });
 
 document.getElementById('imageLoader').addEventListener('change', function(e) {
@@ -106,6 +122,15 @@ document.getElementById('imageLoader').addEventListener('change', function(e) {
 
 alphaInput.addEventListener('input', () => {
     alpha = parseFloat(alphaInput.value);
+});
+
+fadeStepInput.addEventListener('input', () => {
+    fadeStep = parseFloat(fadeStepInput.value);
+});
+
+antialiasInput.addEventListener('change', () => {
+    ctx.imageSmoothingEnabled = antialiasInput.checked;
+    clearCanvas();
 });
 </script>
 </body>
