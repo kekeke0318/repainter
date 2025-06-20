@@ -4,63 +4,94 @@
     <meta charset="UTF-8" />
     <title>Repainter</title>
     <link rel="stylesheet" href="style.css" />
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
   </head>
   <body>
     <h1>Repainter</h1>
     <div id="controls">
-      <label
-        >Motif Image: <input type="file" id="imageLoader" accept="image/*"
-      /></label>
-      <label
-        >Pen Color: <input type="color" id="penColor" value="#000000"
-      /></label>
-      <label
-        >Alpha:
-        <input type="range" id="penAlpha" min="0" max="1" step="0.01" value="1"
-      /></label>
-      <label
-        >Pen Width:
-        <input type="range" id="penWidth" min="1" max="20" value="3"
-      /></label>
-      <label
-        ><input type="checkbox" id="antialiasToggle" checked /> Antialias</label
-      >
-      <label
-        >Stabilize
-        <input
-          type="range"
-          id="stabilizeRange"
-          min="0"
-          max="0.9"
-          step="0.1"
-          value="0"
-      /></label>
-      <label
-        >Grid Size
-        <input
-          type="number"
-          id="gridSize"
-          min="1"
-          value="16"
-          style="width: 60px"
-      /></label>
-      <button id="undoBtn">Undo</button>
-      <button id="redoBtn">Redo</button>
-      <button id="saveBtn">Save PNG</button>
-      <button id="clearBtn">Clear</button>
-      <button id="centerBtn">Center</button>
-      <label
-        >Import JSON: <input type="file" id="importJson" accept=".json"
-      /></label>
-      <button id="exportJsonBtn">Export JSON</button>
-      <div id="playbackControls">
-        <button id="playBtn">Play</button>
+      <div class="section" id="fileOps">
+        <label
+          >モチーフ画像:<input type="file" id="imageLoader" accept="image/*"
+        /></label>
+        <label
+          >JSON読み込み:<input type="file" id="importJson" accept=".json"
+        /></label>
+        <button id="exportJsonBtn" aria-label="JSON書き出し">
+          <span class="material-icons">save</span>
+        </button>
+        <button id="saveBtn" aria-label="PNG保存">
+          <span class="material-icons">image</span>
+        </button>
+      </div>
+      <div class="section" id="drawSettings">
+        <label
+          >ペン色:<input type="color" id="penColor" value="#000000"
+        /></label>
+        <label
+          >透明度:<input
+            type="range"
+            id="penAlpha"
+            min="0"
+            max="1"
+            step="0.01"
+            value="1"
+          /><span id="alphaValue">1</span></label
+        >
+        <label
+          >線幅:<input
+            type="range"
+            id="penWidth"
+            min="1"
+            max="20"
+            value="3"
+          /><span id="widthValue">3</span></label
+        >
+        <label
+          ><input type="checkbox" id="antialiasToggle" checked />
+          アンチエイリアス</label
+        >
+        <label
+          >補正:<input
+            type="range"
+            id="stabilizeRange"
+            min="0"
+            max="0.9"
+            step="0.1"
+            value="0"
+          /><span id="stabilizeValue">0</span></label
+        >
+        <label
+          >グリッドサイズ:<select id="gridSize">
+            <option value="8">8</option>
+            <option value="16" selected>16</option>
+            <option value="32">32</option>
+          </select></label
+        >
+      </div>
+      <div class="section" id="editControls">
+        <button id="undoBtn" aria-label="元に戻す">
+          <span class="material-icons">undo</span>
+        </button>
+        <button id="redoBtn" aria-label="やり直す">
+          <span class="material-icons">redo</span>
+        </button>
+        <button id="clearBtn" aria-label="消去">
+          <span class="material-icons">delete</span>
+        </button>
+        <button id="centerBtn" aria-label="中央表示">
+          <span class="material-icons">center_focus_strong</span>
+        </button>
+      </div>
+      <div class="section" id="playbackControls">
+        <button id="playBtn">再生</button>
         <button id="prevFrameBtn">&#9664;</button>
         <button id="nextFrameBtn">&#9654;</button>
         <input type="range" id="playbackRange" min="0" value="0" step="1" />
         <label
-          ><input type="checkbox" id="playUseCurrent" /> Use current
-          settings</label
+          ><input type="checkbox" id="playUseCurrent" /> 現在の設定を使用</label
         >
       </div>
     </div>

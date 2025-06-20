@@ -5,6 +5,9 @@ const ctx = canvas.getContext("2d");
 const penColor = document.getElementById("penColor");
 const penAlpha = document.getElementById("penAlpha");
 const penWidth = document.getElementById("penWidth");
+const alphaValue = document.getElementById("alphaValue");
+const widthValue = document.getElementById("widthValue");
+const stabilizeValue = document.getElementById("stabilizeValue");
 const clearBtn = document.getElementById("clearBtn");
 const undoBtn = document.getElementById("undoBtn");
 const redoBtn = document.getElementById("redoBtn");
@@ -131,6 +134,9 @@ function resizeCanvas() {
 setCanvasSize(640, 480);
 updateTransform();
 saveHistory();
+alphaValue.textContent = parseFloat(penAlpha.value).toFixed(2);
+widthValue.textContent = penWidth.value;
+stabilizeValue.textContent = stabilizeRange.value;
 
 imageLoader.addEventListener("change", function (e) {
   const reader = new FileReader();
@@ -344,11 +350,20 @@ antialiasToggle.addEventListener("change", (e) => {
   antialias = e.target.checked;
 });
 
-stabilizeRange.addEventListener("input", (e) => {
-  stabilizeAmount = parseFloat(e.target.value);
+penAlpha.addEventListener("input", () => {
+  alphaValue.textContent = parseFloat(penAlpha.value).toFixed(2);
 });
 
-gridSizeInput.addEventListener("input", (e) => {
+penWidth.addEventListener("input", () => {
+  widthValue.textContent = penWidth.value;
+});
+
+stabilizeRange.addEventListener("input", (e) => {
+  stabilizeAmount = parseFloat(e.target.value);
+  stabilizeValue.textContent = e.target.value;
+});
+
+gridSizeInput.addEventListener("change", (e) => {
   GRID_SIZE = parseInt(e.target.value, 10) || 1;
 });
 
@@ -361,7 +376,7 @@ centerBtn.addEventListener("click", () => {
 
 function startPlayback() {
   if (playTimer || !playbackStrokes.length) return;
-  playBtn.textContent = "Pause";
+  playBtn.textContent = "一時停止";
   playTimer = setInterval(() => {
     let val = parseInt(playbackRange.value);
     if (val >= playbackStrokes.length) {
@@ -378,7 +393,7 @@ function stopPlayback() {
   if (!playTimer) return;
   clearInterval(playTimer);
   playTimer = null;
-  playBtn.textContent = "Play";
+  playBtn.textContent = "再生";
 }
 
 playBtn.addEventListener("click", () => {
@@ -450,5 +465,11 @@ document.addEventListener("keydown", (e) => {
     redoBtn.click();
   } else if (e.key === "Delete") {
     clearBtn.click();
+  } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+    e.preventDefault();
+    saveBtn.click();
+  } else if (e.code === "Space") {
+    e.preventDefault();
+    playBtn.click();
   }
 });

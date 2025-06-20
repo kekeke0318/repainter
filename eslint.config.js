@@ -1,12 +1,12 @@
 export default [
   {
-    files: ['**/*.js'],
+    files: ["**/*.js"],
     languageOptions: {
       ecmaVersion: 2021,
-      sourceType: 'module',
+      sourceType: "module",
       globals: {
-        window: 'readonly',
-        document: 'readonly',
+        window: "readonly",
+        document: "readonly",
       },
     },
     rules: {},

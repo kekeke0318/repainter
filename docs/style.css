@@ -26,10 +26,17 @@ h1 {
 #controls {
   margin: 10px 0;
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 10px;
   position: relative;
   z-index: 10;
+}
+
+.section {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
 }
 
 #canvasContainer {
@@ -73,4 +80,9 @@ button {
   border: none;
   padding: 5px 10px;
   cursor: pointer;
+}
+
+.material-icons {
+  font-size: 20px;
+  vertical-align: middle;
 }
