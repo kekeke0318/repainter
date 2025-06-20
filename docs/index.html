@@ -27,11 +27,24 @@
  #controls > * {
     margin: 4px;
  }
- canvas {
-    display: block;
-    margin: 0 auto;
-    background: #fff;
- }
+#canvasContainer {
+    position: relative;
+    display: inline-block;
+    border: 1px solid var(--control-border);
+}
+#motif {
+    position: absolute;
+    top: 0;
+    left: 0;
+    max-width: 100%;
+    max-height: 80vh;
+}
+canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    background: transparent;
+}
 </style>
 </head>
 <body>
@@ -41,72 +54,62 @@
   <label>ペン太さ <input type="range" id="penSize" min="1" max="20" value="3"></label>
   <label>非表示時アルファ <input type="range" id="alpha" min="0" max="1" step="0.1" value="0"></label>
 </div>
-<canvas id="canvas" width="800" height="600"></canvas>
+<div id="canvasContainer">
+  <img id="motif" style="display:none;" />
+  <canvas id="canvas"></canvas>
+</div>
 <script>
+const imageLoader = document.getElementById('imageLoader');
+const motif = document.getElementById('motif');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
-let drawing = false;
-let motifImg = null;
-let alpha = 0;
-
 const penColor = document.getElementById('penColor');
 const penSize = document.getElementById('penSize');
 const alphaInput = document.getElementById('alpha');
+let drawing = false;
 
-function clearCanvas() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (motifImg) ctx.drawImage(motifImg, 0, 0, canvas.width, canvas.height);
+function resizeCanvas() {
+    canvas.width = motif.clientWidth;
+    canvas.height = motif.clientHeight;
 }
 
-function draw(e) {
-    if (!drawing) return;
-    ctx.lineWidth = penSize.value;
-    ctx.lineCap = 'round';
-    ctx.strokeStyle = penColor.value;
-    ctx.lineTo(e.offsetX, e.offsetY);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(e.offsetX, e.offsetY);
-}
-
-canvas.addEventListener('mousedown', (e) => {
-    drawing = true;
-    ctx.beginPath();
-    ctx.moveTo(e.offsetX, e.offsetY);
-    if (motifImg) ctx.globalAlpha = alpha;
-});
-
-canvas.addEventListener('mousemove', draw);
-
-canvas.addEventListener('mouseup', () => {
-    drawing = false;
-    ctx.beginPath();
-    ctx.globalAlpha = 1.0;
-    if (motifImg) clearCanvas();
-});
-
-canvas.addEventListener('mouseout', () => {
-    drawing = false;
-    ctx.beginPath();
-    ctx.globalAlpha = 1.0;
-    if (motifImg) clearCanvas();
-});
-
-document.getElementById('imageLoader').addEventListener('change', function(e) {
+imageLoader.addEventListener('change', function(e) {
     const reader = new FileReader();
     reader.onload = function(event) {
-        motifImg = new Image();
-        motifImg.onload = function() {
-            clearCanvas();
+        motif.src = event.target.result;
+        motif.style.display = 'block';
+        motif.onload = () => {
+            resizeCanvas();
         };
-        motifImg.src = event.target.result;
     };
     reader.readAsDataURL(e.target.files[0]);
 });
 
-alphaInput.addEventListener('input', () => {
-    alpha = parseFloat(alphaInput.value);
+window.addEventListener('resize', resizeCanvas);
+
+canvas.addEventListener('mousedown', e => {
+    drawing = true;
+    ctx.strokeStyle = penColor.value;
+    ctx.lineWidth = penSize.value;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(e.offsetX, e.offsetY);
+    motif.style.opacity = alphaInput.value;
 });
+
+canvas.addEventListener('mousemove', e => {
+    if (!drawing) return;
+    ctx.lineTo(e.offsetX, e.offsetY);
+    ctx.stroke();
+});
+
+function endDraw() {
+    drawing = false;
+    motif.style.opacity = 1;
+}
+
+canvas.addEventListener('mouseup', endDraw);
+canvas.addEventListener('mouseout', endDraw);
 </script>
 </body>
 </html>
