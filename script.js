@@ -9,7 +9,8 @@ const undoBtn = document.getElementById('undoBtn');
 const redoBtn = document.getElementById('redoBtn');
 const saveBtn = document.getElementById('saveBtn');
 const antialiasToggle = document.getElementById('antialiasToggle');
-const stabilizeToggle = document.getElementById('stabilizeToggle');
+const stabilizeRange = document.getElementById('stabilizeRange');
+const centerBtn = document.getElementById('centerBtn');
 const container = document.getElementById('canvasContainer');
 let drawing = false;
 let strokes = 0;
@@ -20,7 +21,7 @@ let panning = false;
 let startPanX = 0;
 let startPanY = 0;
 let antialias = true;
-let stabilize = false;
+let stabilizeAmount = 0;
 let lastPos = null;
 
 let history = [];
@@ -97,8 +98,12 @@ canvas.addEventListener('pointerdown', e => {
         ctx.imageSmoothingEnabled = antialias;
         ctx.beginPath();
         const pos = getCanvasCoords(e);
-        lastPos = pos;
-        ctx.moveTo(pos.x, pos.y);
+        let startPos = pos;
+        if (!antialias) {
+            startPos = { x: Math.round(pos.x) + 0.5, y: Math.round(pos.y) + 0.5 };
+        }
+        lastPos = startPos;
+        ctx.moveTo(startPos.x, startPos.y);
         motif.style.visibility = 'hidden';
     }
 });
@@ -157,12 +162,15 @@ canvas.addEventListener('pointermove', e => {
     if (!drawing) return;
     const pos = getCanvasCoords(e);
     let drawPos = pos;
-    if (stabilize && lastPos) {
+    if (stabilizeAmount > 0 && lastPos) {
         lastPos = {
-            x: lastPos.x * 0.75 + pos.x * 0.25,
-            y: lastPos.y * 0.75 + pos.y * 0.25
+            x: lastPos.x * stabilizeAmount + pos.x * (1 - stabilizeAmount),
+            y: lastPos.y * stabilizeAmount + pos.y * (1 - stabilizeAmount)
         };
         drawPos = lastPos;
+    }
+    if (!antialias) {
+        drawPos = { x: Math.round(drawPos.x) + 0.5, y: Math.round(drawPos.y) + 0.5 };
     }
     ctx.lineTo(drawPos.x, drawPos.y);
     ctx.stroke();
@@ -224,6 +232,25 @@ antialiasToggle.addEventListener('change', e => {
     antialias = e.target.checked;
 });
 
-stabilizeToggle.addEventListener('change', e => {
-    stabilize = e.target.checked;
+stabilizeRange.addEventListener('input', e => {
+    stabilizeAmount = parseFloat(e.target.value);
+});
+
+centerBtn.addEventListener('click', () => {
+    const rect = container.getBoundingClientRect();
+    panX += window.innerWidth / 2 - (rect.left + rect.width / 2);
+    panY += window.innerHeight / 2 - (rect.top + rect.height / 2);
+    updateTransform();
+});
+
+document.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        undoBtn.click();
+    } else if ((e.ctrlKey || e.metaKey) && ((e.shiftKey && e.key.toLowerCase() === 'z') || e.key.toLowerCase() === 'y')) {
+        e.preventDefault();
+        redoBtn.click();
+    } else if (e.key === 'Delete') {
+        clearBtn.click();
+    }
 });
