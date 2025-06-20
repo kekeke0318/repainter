@@ -48,6 +48,37 @@ let playbackStrokes = [];
 let playTimer = null;
 let lastCell = null;
 
+function drawPixelCell(cell) {
+  ctx.fillRect(cell.x * GRID_SIZE, cell.y * GRID_SIZE, GRID_SIZE, GRID_SIZE);
+}
+
+function lineCells(start, end) {
+  const cells = [];
+  let x0 = start.x;
+  let y0 = start.y;
+  const x1 = end.x;
+  const y1 = end.y;
+  const dx = Math.abs(x1 - x0);
+  const dy = Math.abs(y1 - y0);
+  const sx = x0 < x1 ? 1 : -1;
+  const sy = y0 < y1 ? 1 : -1;
+  let err = dx - dy;
+  while (true) {
+    cells.push({ x: x0, y: y0 });
+    if (x0 === x1 && y0 === y1) break;
+    const e2 = err * 2;
+    if (e2 > -dy) {
+      err -= dy;
+      x0 += sx;
+    }
+    if (e2 < dx) {
+      err += dx;
+      y0 += sy;
+    }
+  }
+  return cells;
+}
+
 function saveHistory() {
   history = history.slice(0, historyIndex + 1);
   history.push(canvas.toDataURL());
@@ -92,18 +123,26 @@ function drawStroke(stroke) {
     ctx.strokeStyle = getStrokeColor();
     ctx.lineWidth = penWidth.value;
     ctx.imageSmoothingEnabled = antialias;
+    ctx.fillStyle = getStrokeColor();
   } else {
     ctx.strokeStyle = stroke.color;
     ctx.lineWidth = stroke.width;
     ctx.imageSmoothingEnabled = stroke.antialias;
+    ctx.fillStyle = stroke.color;
   }
-  const pts = cells.map(cellToPos);
-  ctx.beginPath();
-  ctx.moveTo(pts[0].x, pts[0].y);
-  for (let i = 1; i < pts.length; i++) {
-    ctx.lineTo(pts[i].x, pts[i].y);
+  if (playUseCurrent.checked ? antialias : stroke.antialias) {
+    const pts = cells.map(cellToPos);
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) {
+      ctx.lineTo(pts[i].x, pts[i].y);
+    }
+    ctx.stroke();
+  } else {
+    cells.forEach((c) => {
+      drawPixelCell(c);
+    });
   }
-  ctx.stroke();
 }
 
 function renderFrame(n) {
@@ -167,19 +206,13 @@ canvas.addEventListener("pointerdown", (e) => {
   if (e.button === 0) {
     drawing = true;
     canvas.setPointerCapture(e.pointerId);
-    ctx.strokeStyle = getStrokeColor();
-    ctx.lineWidth = penWidth.value;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
     ctx.imageSmoothingEnabled = antialias;
-    ctx.beginPath();
     const pos = getCanvasCoords(e);
     let startPos = pos;
     if (!antialias) {
-      startPos = { x: Math.round(pos.x) + 0.5, y: Math.round(pos.y) + 0.5 };
+      startPos = { x: Math.floor(pos.x), y: Math.floor(pos.y) };
     }
     lastPos = startPos;
-    ctx.moveTo(startPos.x, startPos.y);
     motif.style.visibility = "hidden";
 
     currentStroke = {
@@ -191,6 +224,18 @@ canvas.addEventListener("pointerdown", (e) => {
     const cell = toCell(startPos);
     currentStroke.cells.push(cell);
     lastCell = cell;
+
+    if (antialias) {
+      ctx.strokeStyle = getStrokeColor();
+      ctx.lineWidth = penWidth.value;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.beginPath();
+      ctx.moveTo(startPos.x, startPos.y);
+    } else {
+      ctx.fillStyle = getStrokeColor();
+      drawPixelCell(cell);
+    }
   }
 });
 
@@ -257,19 +302,25 @@ canvas.addEventListener("pointermove", (e) => {
     };
     drawPos = lastPos;
   }
-  const cell = toCell(pos);
-  if (!lastCell || cell.x !== lastCell.x || cell.y !== lastCell.y) {
-    currentStroke.cells.push(cell);
+  const cell = toCell(drawPos);
+  if (!lastCell) {
     lastCell = cell;
   }
-  if (!antialias) {
-    drawPos = {
-      x: Math.round(drawPos.x) + 0.5,
-      y: Math.round(drawPos.y) + 0.5,
-    };
+  if (antialias) {
+    if (cell.x !== lastCell.x || cell.y !== lastCell.y) {
+      currentStroke.cells.push(cell);
+      lastCell = cell;
+    }
+    ctx.lineTo(drawPos.x, drawPos.y);
+    ctx.stroke();
+  } else {
+    const cells = lineCells(lastCell, cell);
+    cells.forEach((c, i) => {
+      if (i !== 0) currentStroke.cells.push(c);
+      drawPixelCell(c);
+    });
+    lastCell = cell;
   }
-  ctx.lineTo(drawPos.x, drawPos.y);
-  ctx.stroke();
 });
 
 canvas.addEventListener("pointerup", (e) => {
