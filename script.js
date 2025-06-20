@@ -28,8 +28,9 @@ imageLoader.addEventListener('change', function(e) {
 
 window.addEventListener('resize', resizeCanvas);
 
-canvas.addEventListener('mousedown', e => {
+canvas.addEventListener('pointerdown', e => {
     drawing = true;
+    canvas.setPointerCapture(e.pointerId);
     ctx.strokeStyle = penColor.value;
     ctx.lineWidth = penWidth.value;
     ctx.lineCap = 'round';
@@ -38,20 +39,21 @@ canvas.addEventListener('mousedown', e => {
     motif.style.opacity = alphaValue.value;
 });
 
-canvas.addEventListener('mousemove', e => {
+canvas.addEventListener('pointermove', e => {
     if (!drawing) return;
     ctx.lineTo(e.offsetX, e.offsetY);
     ctx.stroke();
 });
 
-canvas.addEventListener('mouseup', e => {
+canvas.addEventListener('pointerup', e => {
     if (!drawing) return;
     drawing = false;
+    canvas.releasePointerCapture(e.pointerId);
     strokes++;
     motif.style.opacity = 1;
 });
 
-canvas.addEventListener('mouseleave', () => {
+canvas.addEventListener('pointerleave', () => {
     drawing = false;
     motif.style.opacity = 1;
 });

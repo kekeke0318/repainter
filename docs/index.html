@@ -44,6 +44,7 @@ canvas {
     top: 0;
     left: 0;
     background: transparent;
+    touch-action: none;
 }
 </style>
 </head>
@@ -87,8 +88,9 @@ imageLoader.addEventListener('change', function(e) {
 
 window.addEventListener('resize', resizeCanvas);
 
-canvas.addEventListener('mousedown', e => {
+canvas.addEventListener('pointerdown', e => {
     drawing = true;
+    canvas.setPointerCapture(e.pointerId);
     ctx.strokeStyle = penColor.value;
     ctx.lineWidth = penSize.value;
     ctx.lineCap = 'round';
@@ -97,7 +99,7 @@ canvas.addEventListener('mousedown', e => {
     motif.style.opacity = alphaInput.value;
 });
 
-canvas.addEventListener('mousemove', e => {
+canvas.addEventListener('pointermove', e => {
     if (!drawing) return;
     ctx.lineTo(e.offsetX, e.offsetY);
     ctx.stroke();
@@ -108,8 +110,11 @@ function endDraw() {
     motif.style.opacity = 1;
 }
 
-canvas.addEventListener('mouseup', endDraw);
-canvas.addEventListener('mouseout', endDraw);
+canvas.addEventListener('pointerup', e => {
+    endDraw();
+    canvas.releasePointerCapture(e.pointerId);
+});
+canvas.addEventListener('pointerleave', endDraw);
 </script>
 </body>
 </html>
