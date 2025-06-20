@@ -11,6 +11,12 @@ const saveBtn = document.getElementById('saveBtn');
 const antialiasToggle = document.getElementById('antialiasToggle');
 const stabilizeRange = document.getElementById('stabilizeRange');
 const centerBtn = document.getElementById('centerBtn');
+const importJson = document.getElementById('importJson');
+const exportJsonBtn = document.getElementById('exportJsonBtn');
+const playBtn = document.getElementById('playBtn');
+const playbackRange = document.getElementById('playbackRange');
+
+const GRID_SIZE = 16; // stroke recording grid size
 const container = document.getElementById('canvasContainer');
 let drawing = false;
 let strokes = 0;
@@ -27,6 +33,12 @@ let lastPos = null;
 let history = [];
 let historyIndex = -1;
 
+let recordedStrokes = [];
+let currentStroke = [];
+let playbackStrokes = [];
+let playTimer = null;
+let lastCell = null;
+
 function saveHistory() {
     history = history.slice(0, historyIndex + 1);
     history.push(canvas.toDataURL());
@@ -40,6 +52,43 @@ function restoreHistory(index) {
         ctx.drawImage(img, 0, 0);
     };
     img.src = history[index];
+}
+
+function toCell(pos) {
+    return {
+        x: Math.floor(pos.x / GRID_SIZE),
+        y: Math.floor(pos.y / GRID_SIZE)
+    };
+}
+
+function cellToPos(cell) {
+    return {
+        x: cell.x * GRID_SIZE + GRID_SIZE / 2,
+        y: cell.y * GRID_SIZE + GRID_SIZE / 2
+    };
+}
+
+function drawStroke(cells) {
+    if (!cells.length) return;
+    const pts = cells.map(cellToPos);
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 0; i < pts.length - 1; i++) {
+        const c = pts[i];
+        const n = pts[i + 1];
+        const mx = (c.x + n.x) / 2;
+        const my = (c.y + n.y) / 2;
+        ctx.quadraticCurveTo(c.x, c.y, mx, my);
+    }
+    ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
+    ctx.stroke();
+}
+
+function renderFrame(n) {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    for (let i = 0; i < n; i++) {
+        drawStroke(playbackStrokes[i]);
+    }
 }
 
 function setCanvasSize(width, height) {
@@ -105,6 +154,11 @@ canvas.addEventListener('pointerdown', e => {
         lastPos = startPos;
         ctx.moveTo(startPos.x, startPos.y);
         motif.style.visibility = 'hidden';
+
+        currentStroke = [];
+        const cell = toCell(startPos);
+        currentStroke.push(cell);
+        lastCell = cell;
     }
 });
 
@@ -169,6 +223,11 @@ canvas.addEventListener('pointermove', e => {
         };
         drawPos = lastPos;
     }
+    const cell = toCell(pos);
+    if (!lastCell || cell.x !== lastCell.x || cell.y !== lastCell.y) {
+        currentStroke.push(cell);
+        lastCell = cell;
+    }
     if (!antialias) {
         drawPos = { x: Math.round(drawPos.x) + 0.5, y: Math.round(drawPos.y) + 0.5 };
     }
@@ -183,6 +242,15 @@ canvas.addEventListener('pointerup', e => {
     strokes++;
     motif.style.visibility = 'visible';
     saveHistory();
+
+    if (currentStroke.length) {
+        recordedStrokes.push(currentStroke);
+        playbackStrokes = recordedStrokes.slice();
+        playbackRange.max = playbackStrokes.length;
+        playbackRange.value = playbackRange.max;
+    }
+    currentStroke = [];
+    lastCell = null;
 });
 
 canvas.addEventListener('pointerleave', () => {
@@ -190,6 +258,14 @@ canvas.addEventListener('pointerleave', () => {
         drawing = false;
         motif.style.visibility = 'visible';
         saveHistory();
+        if (currentStroke.length) {
+            recordedStrokes.push(currentStroke);
+            playbackStrokes = recordedStrokes.slice();
+            playbackRange.max = playbackStrokes.length;
+            playbackRange.value = playbackRange.max;
+        }
+        currentStroke = [];
+        lastCell = null;
     }
 });
 
@@ -197,6 +273,10 @@ clearBtn.addEventListener('click', () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     strokes = 0;
     saveHistory();
+    recordedStrokes = [];
+    playbackStrokes = [];
+    playbackRange.max = 0;
+    playbackRange.value = 0;
 });
 
 undoBtn.addEventListener('click', () => {
@@ -241,6 +321,66 @@ centerBtn.addEventListener('click', () => {
     panX += window.innerWidth / 2 - (rect.left + rect.width / 2);
     panY += window.innerHeight / 2 - (rect.top + rect.height / 2);
     updateTransform();
+});
+
+function startPlayback() {
+    if (playTimer || !playbackStrokes.length) return;
+    playBtn.textContent = 'Pause';
+    playTimer = setInterval(() => {
+        let val = parseInt(playbackRange.value);
+        if (val >= playbackStrokes.length) {
+            stopPlayback();
+            return;
+        }
+        val++;
+        playbackRange.value = val;
+        renderFrame(val);
+    }, 300);
+}
+
+function stopPlayback() {
+    if (!playTimer) return;
+    clearInterval(playTimer);
+    playTimer = null;
+    playBtn.textContent = 'Play';
+}
+
+playBtn.addEventListener('click', () => {
+    if (playTimer) {
+        stopPlayback();
+    } else {
+        startPlayback();
+    }
+});
+
+playbackRange.addEventListener('input', e => {
+    stopPlayback();
+    renderFrame(parseInt(e.target.value));
+});
+
+exportJsonBtn.addEventListener('click', () => {
+    const data = { gridSize: GRID_SIZE, strokes: recordedStrokes };
+    const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'strokes.json';
+    link.click();
+    URL.revokeObjectURL(url);
+});
+
+importJson.addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+        const data = JSON.parse(ev.target.result);
+        playbackStrokes = data.strokes || [];
+        playbackRange.max = playbackStrokes.length;
+        playbackRange.value = 0;
+        renderFrame(0);
+    };
+    reader.readAsText(file);
 });
 
 document.addEventListener('keydown', e => {
