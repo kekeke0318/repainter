@@ -53,20 +53,23 @@ canvas {
 <div id="controls">
   <label>画像アップロード <input type="file" id="imageLoader" accept="image/*" /></label>
   <label>ペン色 <input type="color" id="penColor" value="#000000"></label>
-  <label>ペン太さ <input type="range" id="penSize" min="1" max="20" value="3"></label>
+  <label>ペン太さ <input type="range" id="penWidth" min="1" max="20" value="3"></label>
+  <button id="clearBtn">クリア</button>
 </div>
 <div id="canvasContainer">
   <img id="motif" style="display:none;" />
-  <canvas id="canvas"></canvas>
+  <canvas id="drawingCanvas"></canvas>
 </div>
 <script>
 const imageLoader = document.getElementById('imageLoader');
 const motif = document.getElementById('motif');
-const canvas = document.getElementById('canvas');
+const canvas = document.getElementById('drawingCanvas');
 const ctx = canvas.getContext('2d');
 const penColor = document.getElementById('penColor');
-const penSize = document.getElementById('penSize');
+const penWidth = document.getElementById('penWidth');
+const clearBtn = document.getElementById('clearBtn');
 let drawing = false;
+let strokes = 0;
 
 function resizeCanvas() {
     canvas.width = motif.clientWidth;
@@ -91,7 +94,7 @@ canvas.addEventListener('pointerdown', e => {
     drawing = true;
     canvas.setPointerCapture(e.pointerId);
     ctx.strokeStyle = penColor.value;
-    ctx.lineWidth = penSize.value;
+    ctx.lineWidth = penWidth.value;
     ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.moveTo(e.offsetX, e.offsetY);
@@ -114,6 +117,11 @@ canvas.addEventListener('pointerup', e => {
     canvas.releasePointerCapture(e.pointerId);
 });
 canvas.addEventListener('pointerleave', endDraw);
+
+clearBtn.addEventListener('click', () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    strokes = 0;
+});
 </script>
 </body>
 </html>
