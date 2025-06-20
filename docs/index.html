@@ -31,6 +31,8 @@
     position: relative;
     display: inline-block;
     border: 1px solid var(--control-border);
+    width: 640px;
+    height: 480px;
 }
 #motif {
     position: absolute;
@@ -44,7 +46,9 @@ canvas {
     position: absolute;
     top: 0;
     left: 0;
-    background: transparent;
+    width: 100%;
+    height: 100%;
+    background: #fff;
     touch-action: none;
 }
 </style>
@@ -68,13 +72,24 @@ const ctx = canvas.getContext('2d');
 const penColor = document.getElementById('penColor');
 const penWidth = document.getElementById('penWidth');
 const clearBtn = document.getElementById('clearBtn');
+const container = document.getElementById('canvasContainer');
 let drawing = false;
 let strokes = 0;
 
-function resizeCanvas() {
-    canvas.width = motif.clientWidth;
-    canvas.height = motif.clientHeight;
+function setCanvasSize(width, height) {
+    container.style.width = width + 'px';
+    container.style.height = height + 'px';
+    canvas.width = width;
+    canvas.height = height;
 }
+
+function resizeCanvas() {
+    if (motif.style.display === 'block') {
+        setCanvasSize(motif.clientWidth, motif.clientHeight);
+    }
+}
+
+setCanvasSize(640, 480);
 
 imageLoader.addEventListener('change', function(e) {
     const reader = new FileReader();
