@@ -1,463 +1,73 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-<meta charset="UTF-8">
-<title>リペインター</title>
-<style>
- :root {
-    --bg-color: #f0f0f0;
-    --text-color: #333;
-    --control-bg: #fff;
-    --control-border: #ccc;
- }
- body {
-    margin: 0;
-    font-family: sans-serif;
-    background: var(--bg-color);
-    color: var(--text-color);
- }
- #controls {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    padding: 8px;
-    background: var(--control-bg);
-    border-bottom: 1px solid var(--control-border);
-    position: relative;
-    z-index: 10;
- }
- #controls > * {
-    margin: 4px;
- }
-#canvasContainer {
-    position: relative;
-    display: inline-block;
-    border: 1px solid var(--control-border);
-    width: 640px;
-    height: 480px;
-    transform-origin: 0 0;
-    overflow: hidden;
-    z-index: 1;
-}
-#motif {
-    position: absolute;
-    top: 0;
-    left: 0;
-    max-width: 100%;
-    max-height: 80vh;
-    visibility: visible;
-}
-canvas {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: transparent;
-    touch-action: none;
-}
-</style>
-</head>
-<body>
-<div id="controls">
-  <label>画像アップロード <input type="file" id="imageLoader" accept="image/*" /></label>
-  <label>ペン色 <input type="color" id="penColor" value="#000000"></label>
-  <label>ペン太さ <input type="range" id="penWidth" min="1" max="20" value="3"></label>
-  <label><input type="checkbox" id="antialiasToggle" checked> アンチエイリアス</label>
-  <label>手振れ補正 <input type="range" id="stabilizeRange" min="0" max="0.9" step="0.1" value="0"></label>
-  <button id="undoBtn">元に戻す</button>
-  <button id="redoBtn">やり直し</button>
-  <button id="saveBtn">PNG保存</button>
-  <button id="clearBtn">クリア</button>
-  <button id="centerBtn">中央表示</button>
-  <label>JSONインポート <input type="file" id="importJson" accept=".json" /></label>
-  <button id="exportJsonBtn">JSONエクスポート</button>
-  <div id="playbackControls">
-    <button id="playBtn">再生</button>
-    <input type="range" id="playbackRange" min="0" value="0" step="1">
-  </div>
-</div>
-<div id="canvasContainer">
-  <img id="motif" style="display:none;" />
-  <canvas id="drawingCanvas"></canvas>
-</div>
-<script>
-const imageLoader = document.getElementById('imageLoader');
-const motif = document.getElementById('motif');
-const canvas = document.getElementById('drawingCanvas');
-const ctx = canvas.getContext('2d');
-const penColor = document.getElementById('penColor');
-const penWidth = document.getElementById('penWidth');
-const clearBtn = document.getElementById('clearBtn');
-const undoBtn = document.getElementById('undoBtn');
-const redoBtn = document.getElementById('redoBtn');
-const saveBtn = document.getElementById('saveBtn');
-const antialiasToggle = document.getElementById('antialiasToggle');
-const stabilizeRange = document.getElementById('stabilizeRange');
-const centerBtn = document.getElementById('centerBtn');
-const importJson = document.getElementById('importJson');
-const exportJsonBtn = document.getElementById('exportJsonBtn');
-const playBtn = document.getElementById('playBtn');
-const playbackRange = document.getElementById('playbackRange');
-const GRID_SIZE = 16;
-const container = document.getElementById('canvasContainer');
-let drawing = false;
-let strokes = 0;
-let scale = 1;
-let panX = 0;
-let panY = 0;
-let panning = false;
-let startPanX = 0;
-let startPanY = 0;
-let antialias = true;
-let stabilizeAmount = 0;
-let lastPos = null;
-
-let history = [];
-let historyIndex = -1;
-
-let recordedStrokes = [];
-let currentStroke = [];
-let playbackStrokes = [];
-let playTimer = null;
-let lastCell = null;
-
-function saveHistory() {
-    history = history.slice(0, historyIndex + 1);
-    history.push(canvas.toDataURL());
-    historyIndex = history.length - 1;
-}
-
-function restoreHistory(index) {
-    const img = new Image();
-    img.onload = () => {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0);
-    };
-    img.src = history[index];
-}
-
-function toCell(pos) {
-  return { x: Math.floor(pos.x / GRID_SIZE), y: Math.floor(pos.y / GRID_SIZE) };
-}
-
-function cellToPos(cell) {
-  return { x: cell.x * GRID_SIZE + GRID_SIZE / 2, y: cell.y * GRID_SIZE + GRID_SIZE / 2 };
-}
-
-function drawStroke(cells) {
-  if (!cells.length) return;
-  const pts = cells.map(cellToPos);
-  ctx.beginPath();
-  ctx.moveTo(pts[0].x, pts[0].y);
-  for (let i = 0; i < pts.length - 1; i++) {
-    const c = pts[i];
-    const n = pts[i + 1];
-    const mx = (c.x + n.x) / 2;
-    const my = (c.y + n.y) / 2;
-    ctx.quadraticCurveTo(c.x, c.y, mx, my);
-  }
-  ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
-  ctx.stroke();
-}
-
-function renderFrame(n) {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  for (let i = 0; i < n; i++) {
-    drawStroke(playbackStrokes[i]);
-  }
-}
-
-function setCanvasSize(width, height) {
-    container.style.width = width + 'px';
-    container.style.height = height + 'px';
-    canvas.width = width;
-    canvas.height = height;
-}
-
-function resizeCanvas() {
-    if (motif.style.display === 'block') {
-        setCanvasSize(motif.clientWidth, motif.clientHeight);
-    }
-    updateTransform();
-}
-
-function updateTransform() {
-    container.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
-}
-
-function getCanvasCoords(e) {
-    const rect = canvas.getBoundingClientRect();
-    return {
-        x: (e.clientX - rect.left) * (canvas.width / rect.width),
-        y: (e.clientY - rect.top) * (canvas.height / rect.height)
-    };
-}
-
-setCanvasSize(640, 480);
-updateTransform();
-saveHistory();
-
-imageLoader.addEventListener('change', function(e) {
-    const reader = new FileReader();
-    reader.onload = function(event) {
-        motif.src = event.target.result;
-        motif.style.display = 'block';
-        motif.onload = () => {
-            resizeCanvas();
-        };
-    };
-    reader.readAsDataURL(e.target.files[0]);
-});
-
-window.addEventListener('resize', resizeCanvas);
-
-canvas.addEventListener('pointerdown', e => {
-    if (e.button === 0) {
-        drawing = true;
-        canvas.setPointerCapture(e.pointerId);
-        ctx.strokeStyle = penColor.value;
-        ctx.lineWidth = penWidth.value;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.imageSmoothingEnabled = antialias;
-        ctx.beginPath();
-        const pos = getCanvasCoords(e);
-        let startPos = pos;
-        if (!antialias) {
-            startPos = { x: Math.round(pos.x) + 0.5, y: Math.round(pos.y) + 0.5 };
-        }
-        lastPos = startPos;
-        ctx.moveTo(startPos.x, startPos.y);
-        motif.style.visibility = 'hidden';
-
-        currentStroke = [];
-        const cell = toCell(startPos);
-        currentStroke.push(cell);
-        lastCell = cell;
-    }
-});
-
-container.addEventListener('pointerdown', e => {
-    if (e.button === 1) {
-        e.preventDefault();
-        panning = true;
-        container.setPointerCapture(e.pointerId);
-        startPanX = e.clientX - panX;
-        startPanY = e.clientY - panY;
-    }
-});
-
-container.addEventListener('pointermove', e => {
-    if (panning) {
-        panX = e.clientX - startPanX;
-        panY = e.clientY - startPanY;
-        updateTransform();
-    }
-});
-
-container.addEventListener('pointerup', e => {
-    if (panning && e.button === 1) {
-        panning = false;
-        container.releasePointerCapture(e.pointerId);
-    }
-});
-
-container.addEventListener('pointerleave', e => {
-    if (panning) {
-        panning = false;
-        container.releasePointerCapture(e.pointerId);
-    }
-});
-
-container.addEventListener('wheel', e => {
-    e.preventDefault();
-    const zoomFactor = 1.1;
-    const rect = container.getBoundingClientRect();
-    const offsetX = e.clientX - rect.left;
-    const offsetY = e.clientY - rect.top;
-    const oldScale = scale;
-    if (e.deltaY < 0) {
-        scale *= zoomFactor;
-    } else {
-        scale /= zoomFactor;
-    }
-    scale = Math.min(Math.max(scale, 0.1), 10);
-    panX = offsetX - (offsetX - panX) * (scale / oldScale);
-    panY = offsetY - (offsetY - panY) * (scale / oldScale);
-    updateTransform();
-});
-
-canvas.addEventListener('pointermove', e => {
-    if (!drawing) return;
-    const pos = getCanvasCoords(e);
-    let drawPos = pos;
-    if (stabilizeAmount > 0 && lastPos) {
-        lastPos = {
-            x: lastPos.x * stabilizeAmount + pos.x * (1 - stabilizeAmount),
-            y: lastPos.y * stabilizeAmount + pos.y * (1 - stabilizeAmount)
-        };
-        drawPos = lastPos;
-    }
-    const cell = toCell(pos);
-    if (!lastCell || cell.x !== lastCell.x || cell.y !== lastCell.y) {
-        currentStroke.push(cell);
-        lastCell = cell;
-    }
-    if (!antialias) {
-        drawPos = { x: Math.round(drawPos.x) + 0.5, y: Math.round(drawPos.y) + 0.5 };
-    }
-    ctx.lineTo(drawPos.x, drawPos.y);
-    ctx.stroke();
-});
-
-function endDraw() {
-    if (drawing) {
-        drawing = false;
-        motif.style.visibility = 'visible';
-        saveHistory();
-        if (currentStroke.length) {
-            recordedStrokes.push(currentStroke);
-            playbackStrokes = recordedStrokes.slice();
-            playbackRange.max = playbackStrokes.length;
-            playbackRange.value = playbackRange.max;
-        }
-        currentStroke = [];
-        lastCell = null;
-    }
-}
-
-canvas.addEventListener('pointerup', e => {
-    endDraw();
-    canvas.releasePointerCapture(e.pointerId);
-});
-canvas.addEventListener('pointerleave', endDraw);
-
-clearBtn.addEventListener('click', () => {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    strokes = 0;
-    saveHistory();
-    recordedStrokes = [];
-    playbackStrokes = [];
-    playbackRange.max = 0;
-    playbackRange.value = 0;
-});
-
-undoBtn.addEventListener('click', () => {
-    if (historyIndex > 0) {
-        historyIndex--;
-        restoreHistory(historyIndex);
-    }
-});
-
-redoBtn.addEventListener('click', () => {
-    if (historyIndex < history.length - 1) {
-        historyIndex++;
-        restoreHistory(historyIndex);
-    }
-});
-
-saveBtn.addEventListener('click', () => {
-    const exportCanvas = document.createElement('canvas');
-    exportCanvas.width = canvas.width;
-    exportCanvas.height = canvas.height;
-    const exportCtx = exportCanvas.getContext('2d');
-    if (motif.src) {
-        exportCtx.drawImage(motif, 0, 0, canvas.width, canvas.height);
-    }
-    exportCtx.drawImage(canvas, 0, 0);
-    const link = document.createElement('a');
-    link.href = exportCanvas.toDataURL('image/png');
-    link.download = 'drawing.png';
-    link.click();
-});
-
-antialiasToggle.addEventListener('change', e => {
-    antialias = e.target.checked;
-});
-
-stabilizeRange.addEventListener('input', e => {
-    stabilizeAmount = parseFloat(e.target.value);
-});
-
-centerBtn.addEventListener('click', () => {
-    const rect = container.getBoundingClientRect();
-    panX += window.innerWidth / 2 - (rect.left + rect.width / 2);
-    panY += window.innerHeight / 2 - (rect.top + rect.height / 2);
-    updateTransform();
-});
-
-function startPlayback() {
-  if (playTimer || !playbackStrokes.length) return;
-  playBtn.textContent = '一時停止';
-  playTimer = setInterval(() => {
-    let val = parseInt(playbackRange.value);
-    if (val >= playbackStrokes.length) {
-      stopPlayback();
-      return;
-    }
-    val++;
-    playbackRange.value = val;
-    renderFrame(val);
-  }, 300);
-}
-
-function stopPlayback() {
-  if (!playTimer) return;
-  clearInterval(playTimer);
-  playTimer = null;
-  playBtn.textContent = '再生';
-}
-
-playBtn.addEventListener('click', () => {
-  if (playTimer) {
-    stopPlayback();
-  } else {
-    startPlayback();
-  }
-});
-
-playbackRange.addEventListener('input', e => {
-  stopPlayback();
-  renderFrame(parseInt(e.target.value));
-});
-
-exportJsonBtn.addEventListener('click', () => {
-  const data = { gridSize: GRID_SIZE, strokes: recordedStrokes };
-  const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = 'strokes.json';
-  link.click();
-  URL.revokeObjectURL(url);
-});
-
-importJson.addEventListener('change', e => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    const data = JSON.parse(ev.target.result);
-    playbackStrokes = data.strokes || [];
-    playbackRange.max = playbackStrokes.length;
-    playbackRange.value = 0;
-    renderFrame(0);
-  };
-  reader.readAsText(file);
-});
-
-document.addEventListener('keydown', e => {
-    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z') {
-        e.preventDefault();
-        undoBtn.click();
-    } else if ((e.ctrlKey || e.metaKey) && ((e.shiftKey && e.key.toLowerCase() === 'z') || e.key.toLowerCase() === 'y')) {
-        e.preventDefault();
-        redoBtn.click();
-    } else if (e.key === 'Delete') {
-        clearBtn.click();
-    }
-});
-</script>
-</body>
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Repainter</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <h1>Repainter</h1>
+    <div id="controls">
+      <label
+        >Motif Image: <input type="file" id="imageLoader" accept="image/*"
+      /></label>
+      <label
+        >Pen Color: <input type="color" id="penColor" value="#000000"
+      /></label>
+      <label
+        >Alpha:
+        <input type="range" id="penAlpha" min="0" max="1" step="0.01" value="1"
+      /></label>
+      <label
+        >Pen Width:
+        <input type="range" id="penWidth" min="1" max="20" value="3"
+      /></label>
+      <label
+        ><input type="checkbox" id="antialiasToggle" checked /> Antialias</label
+      >
+      <label
+        >Stabilize
+        <input
+          type="range"
+          id="stabilizeRange"
+          min="0"
+          max="0.9"
+          step="0.1"
+          value="0"
+      /></label>
+      <label
+        >Grid Size
+        <input
+          type="number"
+          id="gridSize"
+          min="1"
+          value="16"
+          style="width: 60px"
+      /></label>
+      <button id="undoBtn">Undo</button>
+      <button id="redoBtn">Redo</button>
+      <button id="saveBtn">Save PNG</button>
+      <button id="clearBtn">Clear</button>
+      <button id="centerBtn">Center</button>
+      <label
+        >Import JSON: <input type="file" id="importJson" accept=".json"
+      /></label>
+      <button id="exportJsonBtn">Export JSON</button>
+      <div id="playbackControls">
+        <button id="playBtn">Play</button>
+        <button id="prevFrameBtn">&#9664;</button>
+        <button id="nextFrameBtn">&#9654;</button>
+        <input type="range" id="playbackRange" min="0" value="0" step="1" />
+        <label
+          ><input type="checkbox" id="playUseCurrent" /> Use current
+          settings</label
+        >
+      </div>
+    </div>
+    <div id="canvasContainer">
+      <img id="motif" style="display: none" />
+      <canvas id="drawingCanvas"></canvas>
+    </div>
+    <script src="script.js"></script>
+  </body>
 </html>
