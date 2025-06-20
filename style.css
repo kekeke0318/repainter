@@ -34,6 +34,8 @@ h1 {
     border: 1px solid #ccc;
     width: 640px;
     height: 480px;
+    transform-origin: 0 0;
+    overflow: hidden;
 }
 
 #motif {
