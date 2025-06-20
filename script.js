@@ -4,7 +4,6 @@ const canvas = document.getElementById('drawingCanvas');
 const ctx = canvas.getContext('2d');
 const penColor = document.getElementById('penColor');
 const penWidth = document.getElementById('penWidth');
-const alphaValue = document.getElementById('alphaValue');
 const clearBtn = document.getElementById('clearBtn');
 let drawing = false;
 let strokes = 0;
@@ -36,7 +35,7 @@ canvas.addEventListener('pointerdown', e => {
     ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.moveTo(e.offsetX, e.offsetY);
-    motif.style.opacity = alphaValue.value;
+    motif.style.visibility = 'hidden';
 });
 
 canvas.addEventListener('pointermove', e => {
@@ -50,12 +49,12 @@ canvas.addEventListener('pointerup', e => {
     drawing = false;
     canvas.releasePointerCapture(e.pointerId);
     strokes++;
-    motif.style.opacity = 1;
+    motif.style.visibility = 'visible';
 });
 
 canvas.addEventListener('pointerleave', () => {
     drawing = false;
-    motif.style.opacity = 1;
+    motif.style.visibility = 'visible';
 });
 
 clearBtn.addEventListener('click', () => {
