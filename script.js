@@ -5,13 +5,25 @@ const ctx = canvas.getContext('2d');
 const penColor = document.getElementById('penColor');
 const penWidth = document.getElementById('penWidth');
 const clearBtn = document.getElementById('clearBtn');
+const container = document.getElementById('canvasContainer');
 let drawing = false;
 let strokes = 0;
 
-function resizeCanvas() {
-    canvas.width = motif.clientWidth;
-    canvas.height = motif.clientHeight;
+function setCanvasSize(width, height) {
+    container.style.width = width + 'px';
+    container.style.height = height + 'px';
+    canvas.width = width;
+    canvas.height = height;
 }
+
+function resizeCanvas() {
+    if (motif.style.display === 'block') {
+        setCanvasSize(motif.clientWidth, motif.clientHeight);
+    }
+}
+
+// initialize default canvas size
+setCanvasSize(640, 480);
 
 imageLoader.addEventListener('change', function(e) {
     const reader = new FileReader();

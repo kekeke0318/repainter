@@ -32,6 +32,8 @@ h1 {
 #canvasContainer {
     position: relative;
     border: 1px solid #ccc;
+    width: 640px;
+    height: 480px;
 }
 
 #motif {
@@ -47,7 +49,9 @@ h1 {
     position: absolute;
     top: 0;
     left: 0;
-    background-color: transparent;
+    width: 100%;
+    height: 100%;
+    background-color: white;
     touch-action: none;
 }
 
