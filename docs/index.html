@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>リペインター</title>
+<style>
+ :root {
+    --bg-color: #f0f0f0;
+    --text-color: #333;
+    --control-bg: #fff;
+    --control-border: #ccc;
+ }
+ body {
+    margin: 0;
+    font-family: sans-serif;
+    background: var(--bg-color);
+    color: var(--text-color);
+ }
+ #controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px;
+    background: var(--control-bg);
+    border-bottom: 1px solid var(--control-border);
+ }
+ #controls > * {
+    margin: 4px;
+ }
+canvas {
+    display: block;
+    margin: 0 auto;
+    background: #fff;
+}
+#canvasWrap {
+    position: relative;
+    width: 800px;
+    margin: 0 auto;
+}
+#canvasWrap canvas,
+#canvasWrap img {
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+</style>
+</head>
+<body>
+<div id="controls">
+  <label>画像アップロード <input type="file" id="imageLoader" accept="image/*" /></label>
+  <label>ペン色 <input type="color" id="penColor" value="#000000"></label>
+  <label>ペン太さ <input type="range" id="penSize" min="1" max="20" value="3"></label>
+  <label>非表示時アルファ <input type="range" id="alpha" min="0" max="1" step="0.1" value="0"></label>
+  <label>フェード量 <input type="range" id="fadeStep" min="0" max="1" step="0.05" value="0"></label>
+  <label>アンチエイリアス <input type="checkbox" id="antialias" checked></label>
+</div>
+<div id="canvasWrap">
+  <img id="motifLayer" alt="" />
+  <canvas id="canvas" width="800" height="600"></canvas>
+</div>
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const motifLayer = document.getElementById('motifLayer');
+let drawing = false;
+let alpha = 0;           // opacity while drawing
+let displayAlpha = 1.0;  // current motif opacity
+let fadeStep = 0;
+
+const penColor = document.getElementById('penColor');
+const penSize = document.getElementById('penSize');
+const alphaInput = document.getElementById('alpha');
+const fadeStepInput = document.getElementById('fadeStep');
+const antialiasInput = document.getElementById('antialias');
+
+function draw(e) {
+    if (!drawing) return;
+    ctx.lineWidth = penSize.value;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = penColor.value;
+    ctx.lineTo(e.offsetX, e.offsetY);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(e.offsetX, e.offsetY);
+}
+
+canvas.addEventListener('mousedown', (e) => {
+    drawing = true;
+    ctx.globalAlpha = 1.0;
+    ctx.beginPath();
+    ctx.moveTo(e.offsetX, e.offsetY);
+    motifLayer.style.opacity = alpha;
+});
+
+canvas.addEventListener('mousemove', draw);
+
+function endStroke() {
+    if (!drawing) return;
+    drawing = false;
+    ctx.beginPath();
+    motifLayer.style.opacity = displayAlpha;
+    displayAlpha = Math.max(0, displayAlpha - fadeStep);
+}
+
+canvas.addEventListener('mouseup', endStroke);
+
+canvas.addEventListener('mouseout', endStroke);
+
+document.getElementById('imageLoader').addEventListener('change', function(e) {
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        motifLayer.src = event.target.result;
+        motifLayer.style.width = canvas.width + 'px';
+        motifLayer.style.height = canvas.height + 'px';
+        motifLayer.style.opacity = displayAlpha;
+    };
+    reader.readAsDataURL(e.target.files[0]);
+});
+
+alphaInput.addEventListener('input', () => {
+    alpha = parseFloat(alphaInput.value);
+});
+
+fadeStepInput.addEventListener('input', () => {
+    fadeStep = parseFloat(fadeStepInput.value);
+});
+
+antialiasInput.addEventListener('change', () => {
+    ctx.imageSmoothingEnabled = antialiasInput.checked;
+});
+</script>
+</body>
+</html>
