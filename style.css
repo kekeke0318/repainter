@@ -27,6 +27,8 @@ h1 {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
+    position: relative;
+    z-index: 10;
 }
 
 #canvasContainer {
@@ -36,6 +38,7 @@ h1 {
     height: 480px;
     transform-origin: 0 0;
     overflow: hidden;
+    z-index: 1;
 }
 
 #motif {

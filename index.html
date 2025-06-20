@@ -12,11 +12,12 @@
         <label>Pen Color: <input type="color" id="penColor" value="#000000"></label>
         <label>Pen Width: <input type="range" id="penWidth" min="1" max="20" value="3"></label>
         <label><input type="checkbox" id="antialiasToggle" checked> Antialias</label>
-        <label><input type="checkbox" id="stabilizeToggle"> Stabilize</label>
+        <label>Stabilize <input type="range" id="stabilizeRange" min="0" max="0.9" step="0.1" value="0"></label>
         <button id="undoBtn">Undo</button>
         <button id="redoBtn">Redo</button>
         <button id="saveBtn">Save PNG</button>
         <button id="clearBtn">Clear</button>
+        <button id="centerBtn">Center</button>
     </div>
     <div id="canvasContainer">
         <img id="motif" style="display:none;" />
