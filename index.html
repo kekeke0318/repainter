@@ -11,6 +11,11 @@
         <label>Motif Image: <input type="file" id="imageLoader" accept="image/*"></label>
         <label>Pen Color: <input type="color" id="penColor" value="#000000"></label>
         <label>Pen Width: <input type="range" id="penWidth" min="1" max="20" value="3"></label>
+        <label><input type="checkbox" id="antialiasToggle" checked> Antialias</label>
+        <label><input type="checkbox" id="stabilizeToggle"> Stabilize</label>
+        <button id="undoBtn">Undo</button>
+        <button id="redoBtn">Redo</button>
+        <button id="saveBtn">Save PNG</button>
         <button id="clearBtn">Clear</button>
     </div>
     <div id="canvasContainer">
