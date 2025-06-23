@@ -1,0 +1,12 @@
+{
+  "name": "repainter",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "prettier --write \"**/*.{js,css,html}\" && eslint ."
+  },
+  "devDependencies": {
+    "eslint": "^9.29.0",
+    "prettier": "^3.5.3"
+  }
+}
